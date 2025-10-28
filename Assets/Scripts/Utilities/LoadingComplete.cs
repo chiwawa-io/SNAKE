@@ -29,6 +29,7 @@ public class LoadingComplete : MonoBehaviour
     private void OnConnectionFailure()
     {
         GameManager.OnErrorOccurred?.Invoke(1, "Connection Failure");
+        Debug.LogWarning("Connection Failure");
     }
 
 }

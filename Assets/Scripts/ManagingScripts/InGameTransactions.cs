@@ -51,16 +51,6 @@ public class InGameTransactions : MonoBehaviour
 
     private void EndGameSession()
     {
-        networkManager.WebSocketCommandHandler.SendLevelEndRequestCommand(0, gameManager.CurrentScore, OnLevelEndSuccess, OnLevelEndFail);
-    }
-
-    private void OnLevelEndSuccess()
-    {
-        networkManager.WebSocketService.BackToSystem();
-    }
-
-    private void OnLevelEndFail(int code, string message)
-    {
-        GameManager.OnErrorOccurred?.Invoke(code, message);
+        gameManager.RequestEnd();
     }
 }

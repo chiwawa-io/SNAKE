@@ -1,16 +1,24 @@
+using Game.Core;
 using Game.UI;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
-namespace Game.UI {
-    public class ErrorPopupController : ErrorUIController
+public class ErrorPopupController : BaseUIController
+{
+    [SerializeField] private TextMeshProUGUI errorMessage;
+    [SerializeField] private TextMeshProUGUI errorCode;
+    [SerializeField] private Button quitButton;
+    
+    protected override void OnShow()
     {
-        [SerializeField] private TextMeshProUGUI errorCodeText;
-        [SerializeField] private TextMeshProUGUI errorMessageText;
-
-        public override void ShowError(int code, string message)
-        {
-            
-        }
+        base.OnShow();
+        
+        var message = GameManager.errorMessage;
+        var code = GameManager.errorCode;
+        
+        errorMessage.text = message;
+        errorCode.text = code.ToString();
+        quitButton.Select();
     }
 }

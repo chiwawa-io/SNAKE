@@ -21,7 +21,6 @@ using UnityEngine;
 
         public event Action OnInitialized;
         public event Action<string> OnAchievementCompleted;
-        public event Action DataSaveSuccess;
 
         #endregion
 
@@ -55,7 +54,7 @@ using UnityEngine;
         {
             if (!IsInitialized)
             {
-                Debug.LogWarning("[AchievementManager] Checked for achievement before system was initialized.");
+                Debug.LogWarning("[PlayerDataManager] Checked for achievement before system was initialized.");
                 return false;
             }
             
@@ -66,7 +65,7 @@ using UnityEngine;
         {
             if (!IsInitialized)
             {
-                Debug.LogError("[AchievementManager] Attempted to complete achievement before system was initialized.");
+                Debug.LogError("[PlayerDataManager] Attempted to complete achievement before system was initialized.");
                 return;
             }
 
@@ -74,7 +73,7 @@ using UnityEngine;
             
             if (_completedAchievementIds.Add(achievementId))
             {
-                Debug.Log($"[AchievementManager] Achievement Completed: {achievementId}. Saving data.");
+                Debug.Log($"[PlayerDataManager] Achievement Completed: {achievementId}. Saving data.");
                 OnAchievementCompleted?.Invoke(achievementId);
                 SaveDataAsync();
             }
@@ -107,7 +106,7 @@ using UnityEngine;
             _completedAchievementIds.Clear();
             IsInitialized = true;
             isLoading = false;
-            Debug.Log("[AchievementManager] Initialized with no existing data.");
+            Debug.Log("[PlayerDataManager] Initialized with no existing data.");
             LoadingComplete.LoadingCompleteAction?.Invoke();
             OnInitialized?.Invoke();
         }
@@ -140,14 +139,14 @@ using UnityEngine;
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[AchievementManager] Failed to parse achievement data: {ex.Message}");
+                Debug.LogError($"[PlayerDataManager] Failed to parse achievement data: {ex.Message}");
                 InitializeEmpty(); // Fallback to a safe empty state.
                 return;
             }
 
             IsInitialized = true;
             isLoading = false;
-            Debug.Log("[AchievementManager] Data loaded and initialized successfully.");
+            Debug.Log("[PlayerDataManager] Data loaded and initialized successfully.");
             
             // Notify other systems that loading is complete.
             LoadingComplete.LoadingCompleteAction?.Invoke();
@@ -156,33 +155,28 @@ using UnityEngine;
 
         private void OnDataLoadError(int code, string message)
         {
-            Debug.LogError($"[AchievementManager] Data load failed. Code: {code}, Message: {message}. Initializing with empty data.");
+            Debug.LogError($"[PlayerDataManager] Data load failed. Code: {code}, Message: {message}. Initializing with empty data.");
             InitializeEmpty(); // Ensure the game can continue by initializing with a default state.
             GameManager.OnErrorOccurred?.Invoke(code, message);
         }
 
         private void OnDataSaveSuccess()
         {
-            DataSaveSuccess?.Invoke();
+            Debug.LogWarning("[PlayerDataManager] Saved data.");
         }
 
         private void OnDataSaveError(int code, string message)
         {
-            Debug.LogError($"[AchievementManager] Data save failed. Code: {code}, Message: {message}");
+            Debug.LogError($"[PlayerDataManager] Data save failed. Code: {code}, Message: {message}");
             GameManager.OnErrorOccurred?.Invoke(code, message);
         }
 
         #endregion
     }
 
-    /// <summary>
-    /// Data Transfer Object (DTO) for achievement data serialization.
-    /// </summary>
     [Serializable]
     public class AchievementData
     {
-        // Using a List for JSON serialization compatibility, as Unity's JsonUtility doesn't handle HashSets well,
-        // and some backends prefer arrays. Newtonsoft.Json can handle HashSets, but this is safer.
         public HashSet<string> CompletedAchievementIds;
 
         public AchievementData(HashSet<string> completedIds)

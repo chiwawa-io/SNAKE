@@ -6,21 +6,6 @@ namespace Game.Core
 {
     public class GameManager : MonoBehaviour
     {
-        #region Singleton
-
-        public static GameManager Instance { get; private set; }
-
-        private void Awake()
-        {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            Instance = this;
-        }
-
-        #endregion
 
         [Header("System References")]
         [SerializeField] private PlayerDataManager playerDataManager; // Updated from PlayerDataManager
@@ -41,14 +26,14 @@ namespace Game.Core
 
         // --- Async Flow Control ---
         private bool _shouldContinue;
-        private bool _canExitAfterSave;
+        private bool _shouldExit;
         private bool _levelBeginRequestComplete;
         private bool _levelBeginRequestSuccess;
         private bool _dataSaveComplete;
         
         // --- Error State ---
-        private int _errorCode;
-        private string _errorMessage;
+        public static int errorCode;
+        public static string errorMessage;
 
         #region Unity Lifecycle & Event Subscription
 
@@ -57,7 +42,6 @@ namespace Game.Core
             GameStateManager.OnStateChanged += HandleGameStateChanged;
             
             Player.UpdateScore += UpdateScore; 
-            playerDataManager.DataSaveSuccess += OnDataSaveSuccess; // Assuming this event exists
             LoadingComplete.LoadingCompleteAction += RequestMainMenu;
             InactivityDetector.TimesUp += RequestExit;
             OnErrorOccurred += EnterErrorState;
@@ -68,7 +52,6 @@ namespace Game.Core
             GameStateManager.OnStateChanged -= HandleGameStateChanged;
 
             Player.UpdateScore -= UpdateScore;
-            playerDataManager.DataSaveSuccess -= OnDataSaveSuccess;
             LoadingComplete.LoadingCompleteAction -= RequestMainMenu;
             InactivityDetector.TimesUp -= RequestExit;
             OnErrorOccurred -= EnterErrorState;
@@ -109,6 +92,9 @@ namespace Game.Core
                 case GameState.GameOver:
                     // achievementManager.AddExperience(Mathf.RoundToInt(_gameTime));
                     break;
+                case GameState.DifficultySelect:
+                    inactivityDetector.StartDetector();
+                    break;
             }
         }
 
@@ -126,6 +112,11 @@ namespace Game.Core
         {
             StartCoroutine(LevelBeginRoutine());
         }
+        public void RequestRestartGame(bool shouldExit)
+        {
+            _shouldExit = shouldExit;
+            StartCoroutine(LevelEndRoutine());
+        }
 
         public void RequestContinueGame()
         {
@@ -133,6 +124,11 @@ namespace Game.Core
             gameStateManager.SetState(GameState.InGame);
         }
 
+        public void RequestEnd()
+        {
+            _shouldExit = true;
+            StartCoroutine(LevelEndRoutine());
+        }
 
         public void TriggerGameOver()
         {
@@ -141,11 +137,6 @@ namespace Game.Core
             gameStateManager.SetState(GameState.GameOver);
         }
 
-        public void RequestRestartGame(bool shouldExit)
-        {
-            _canExitAfterSave = shouldExit;
-            StartCoroutine(LevelEndRoutine());
-        }
 
         private void RequestMainMenu() => gameStateManager.SetState(GameState.MainMenu);
 
@@ -153,7 +144,7 @@ namespace Game.Core
 
         public void RequestExitWithError()
         {
-            networkManager.WebSocketService.BackToSystemWithError(_errorCode.ToString(), _errorMessage);
+            networkManager.WebSocketService.BackToSystemWithError(errorCode.ToString(), errorMessage);
         }
         
         #endregion
@@ -162,8 +153,8 @@ namespace Game.Core
         
         private void EnterErrorState(int code, string message)
         {
-            _errorCode = code;
-            _errorMessage = message;
+            errorCode = code;
+            errorMessage = message;
             gameStateManager.SetState(GameState.Error);
         }
 
@@ -215,16 +206,30 @@ namespace Game.Core
         {
             gameStateManager.SetState(GameState.Loading);
             _dataSaveComplete = false;
-            
+     
             networkManager.WebSocketCommandHandler.SendLevelEndRequestCommand(0, CurrentScore, OnLevelEndSuccess, OnLevelEndFail);
-            
-            yield return new WaitUntil(() => _dataSaveComplete);
-            
-            if (_levelBeginRequestSuccess && !_canExitAfterSave)
+     
+            const float timeout = 10f;
+            var elapsed = 0f;
+     
+            while (!_dataSaveComplete && elapsed < timeout)
+            {
+                elapsed += Time.deltaTime;
+            }
+     
+            if (!_dataSaveComplete)
+            {
+                Debug.LogError("LevelEnd timed out!");
+                EnterErrorState(408, "Request timed out");
+                RequestExit();
+                yield break;
+            }
+     
+            if (_levelBeginRequestSuccess && !_shouldExit)
             {
                 StartCoroutine(LevelBeginRoutine());
             }
-            else if (_canExitAfterSave)
+            else if (_shouldExit)
             {
                 RequestExit();
             }
@@ -240,10 +245,6 @@ namespace Game.Core
         {
             EnterErrorState(code, message);
             _dataSaveComplete = true; 
-        }
-
-        private void OnDataSaveSuccess()
-        {
         }
 
         #endregion

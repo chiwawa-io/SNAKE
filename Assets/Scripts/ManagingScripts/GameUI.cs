@@ -14,7 +14,7 @@ namespace Game.UI
         [SerializeField] private BaseUIController achievementsScreen;
 
         [Header("Panel Controllers")]
-        [SerializeField] private ErrorUIController errorPanel;
+        [SerializeField] private BaseUIController errorPanel;
         [SerializeField] private BaseUIController savingPanel;
 
         private List<BaseUIController> _allScreens;
@@ -30,15 +30,12 @@ namespace Game.UI
 
         private void OnEnable()
         {
-            // Subscribe to high-level game state events
-            GameManager.OnErrorOccurred += ShowError;
             GameStateManager.OnStateChanged += StateChange;
             LoadingComplete.LoadingCompleteAction += ShowMainMenuScreen;
         }
 
         private void OnDisable()
         {
-            GameManager.OnErrorOccurred -= ShowError;
             GameStateManager.OnStateChanged -= StateChange;
             LoadingComplete.LoadingCompleteAction -= ShowMainMenuScreen;
         }
@@ -66,6 +63,7 @@ namespace Game.UI
                     ShowSavingPanel();
                     break;
                 case GameState.Error:
+                    SetActiveScreen(errorPanel);
 ;                   break;
             }
         }
@@ -73,12 +71,6 @@ namespace Game.UI
         private void ShowMainMenuScreen()
         {
             SetActiveScreen(mainMenuScreen);
-        }
-        
-
-        private void ShowError(int code, string message)
-        {
-            errorPanel.ShowError(code, message);
         }
 
         private void ShowSavingPanel()
