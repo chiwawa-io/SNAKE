@@ -553,7 +553,7 @@ PrefabInstance:
     - target: {fileID: 1397371335787583720, guid: 70b676c7ff4b5a540827969ca8db376d, type: 3}
       propertyPath: errorPanel
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 1930744021}
     - target: {fileID: 1520576239752633448, guid: 70b676c7ff4b5a540827969ca8db376d, type: 3}
       propertyPath: m_IsActive
       value: 0
